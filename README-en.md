@@ -7,14 +7,18 @@
 
 # Announcement
 
-The `_x` suffix in the config file indicates the Android version of your current system. `_v` means `Android15`, `_u` means `Android14`, `_t` means `Android13`, and no suffix usually refers to the device’s original `Android` version.
-
-Some devices have issues with `lz4kd`, which are being fixed. **If it doesn't boot, please don't enable the `ZRAM algorithm` yet.**
-
+The _x suffix in the configuration file indicates the codename of the Android version you are currently using. For example, `_w corresponds to Android 16, _v to Android 15, _u to Android 14, _t to Android 13, and _s to Android 12.` A configuration without any suffix usually refers to the device's factory Android version.
+ 
+Some devices have issues with `lz4kd`, and a fix is in progress. **If the build fails, please do NOT enable the `ZRAM algorithm`**, and make sure to back up your `boot.img` in advance!
+ 
+Special handling is required for `OnePlus Ace5Pro (ColorOS)` and `OnePlus 13 (ColorOS)`, and you must replace the `dtbo.img`.
+ 
 Remember to install the module with **volume down**.
-
+ 
 # Changelog
--- Allow custom kernel suffix  <**`beta`**>
+-- Temporarily fixed the build issue for `OnePlus Ace5Pro` and `OnePlus 13` [@reigadegr](https://github.com/reigadegr)   
+
+-- Allow custom kernel suffix  <- **`beta`**
 ```
 1. When the custom kernel suffix is empty, a random string is used instead of the default “x.xx.xxx-androidxx-8-o-g3b1e97b8b29f”
  
@@ -25,9 +29,11 @@ Remember to install the module with **volume down**.
 ```
 AnyKernel3_SukiSUUltra_12866_oneplus_ace2pro_Android15_KPM_VFS.zip
 ```
--- New `dir4` and `dir5` paths added to support `sm8750` and some devices with new paths when ZRAM is enabled (such as `ace2p`, `13T`).  
--- Added support for the `LZ4K` compression algorithm in the `zram` module.  
--- Removed potential `_v` or `_u` suffixes in the configuration file.  
+-- New `dir4` and `dir5` paths added to support `sm8750` and some devices with new paths when ZRAM is enabled (such as `ace2p`, `13T`). [@ShirkNeko](https://github.com/ShirkNeko)   
+
+-- Added support for the `LZ4K` compression algorithm in the `zram` module. [@ShirkNeko](https://github.com/ShirkNeko)   
+
+-- Removed potential version code suffix in configuration files.
 -- Synchronized changes with the upstream download channel for the `susfs` module to fix download issues.  
 -- Optimized the build scheme for `sm8750` and `sm7675`.  
 -- Fixed the version number error.  

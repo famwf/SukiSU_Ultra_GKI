@@ -56,7 +56,7 @@ on:
           - sun
       ANDROID_VERSION:
         type: choice
-        description: "内核安卓版本"
+        description: "内核初始安卓版本"
         required: true
         default: android13
         options:
@@ -113,7 +113,7 @@ jobs:
         with:
           root-reserve-mb: 8192
           temp-reserve-mb: 2048
-          swap-size-mb: 8192
+          swap-size-mb: 2048
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
@@ -123,11 +123,6 @@ jobs:
         run: |
           git config --global user.name "Numbersf"
           git config --global user.email "263623064@qq.com"
-
-      - name: Install dependencies
-        run: |
-          sudo apt update && sudo apt upgrade -y
-          sudo apt install -y python3 git curl
 
       - name: Show selected inputs debug
         run: |
@@ -141,6 +136,12 @@ jobs:
           echo "Selected SUSFS_CI: ${{ github.event.inputs.SUSFS_CI }}"
           echo "Selected VFS: ${{ github.event.inputs.VFS }}"
           echo "Selected ZRAM: ${{ github.event.inputs.ZRAM }}"
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt upgrade -y
+          sudo apt install -y python3 git curl
+
 
       - name: Install repo tool
         run: |
@@ -182,7 +183,9 @@ jobs:
             kernel_platform/common/scripts/setlocalversion \
             kernel_platform/msm-kernel/scripts/setlocalversion \
             kernel_platform/external/dtc/scripts/setlocalversion; do
+              # 清理默认后缀
               sed -i '/^res=/a res=$(echo "$res" | sed -E '\''s/-[0-9]+-o-g[0-9a-f]{7,}//'\'')' "$path"
+              # 替换 echo "$res" 为自定义后缀，使用 bazel 编译有特殊符号字数限制，如果出错，请减短
               sed -i "\$s|echo \"\\\$res\"|echo \"\$res-${{ github.event.inputs.SUFFIX }}\"|" "$path"
           done
           git add -A
@@ -206,7 +209,7 @@ jobs:
               # 清理默认后缀
               sed -i '/^res=/a res=$(echo "$res" | sed -E '\''s/-[0-9]+-o-g[0-9a-fA-F]{7,}//g'\'')' "$path"
 
-              # 替换 echo "$res" 为带随机后缀
+              # 替换 echo "$res" 为随机后缀
               sed -i "\$s|echo \"\\\$res\"|echo \"\$res-$RANDOM_SUFFIX\"|" "$path"
           done
 
@@ -260,31 +263,30 @@ jobs:
           patch -p1 -F 3 < 69_hide_stuff.patch
           echo "隐藏应用_patch完成"
 
-      - name: Convert HMBIRD_OGKI to HMBIRD_GKI
+      # OGKI转换GKI，可以直接使用官方 dtbo 开机，按需是否启用
+      - name: Apply Convert HMBIRD_OGKI to HMBIRD_GKI
+        if: ${{ github.event.inputs.KERNEL_VERSION == '6.6' }}
         run: |
-          if [ "${{ github.event.inputs.KERNEL_VERSION }}" = "6.6" ]; then
             cd kernel_workspace/kernel_platform/common
             sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
             wget https://github.com/Numbersf/Action-Build/raw/main/patchs/hmbird_patch.patch
             echo "正在打OGKI转换GKI补丁"
             patch -p1 -F 3 < hmbird_patch.patch
-            echo "OGKI转换GKI patch完成"
-          fi
+            echo "OGKI转换GKI_patch完成"
 
       - name: Apply VFS
+        if: ${{ github.event.inputs.VFS == 'true' }}
         run: |
           cd kernel_workspace/kernel_platform/common
-          if [ "${{ github.event.inputs.VFS }}" = "true" ]; then
             cp ../../SukiSU_patch/hooks/syscall_hooks.patch ./
             echo "正在打vfs补丁"
             patch -p1 -F 3 < syscall_hooks.patch
             echo "vfs_patch完成"
-          fi
 
       - name: Apply LZ4KD
+        if: ${{ github.event.inputs.ZRAM == 'true' }}
         run: |
           cd kernel_workspace/kernel_platform/common
-          if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
             cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/lz4kd.patch ./
             echo "正在打lz4kd补丁"
             patch -p1 -F 3 < lz4kd.patch || true
@@ -293,7 +295,6 @@ jobs:
             echo "正在打lz4k_oplus补丁"
             patch -p1 -F 3 < lz4k_oplus.patch || true
             echo 'lz4k_oplus_patch完成'
-          fi
 
       # 配置信息
       - name: Add Configuration Settings
@@ -302,13 +303,13 @@ jobs:
           CONFIG_FILE=./common/arch/arm64/configs/gki_defconfig
           KERNEL_VERSION="${{ github.event.inputs.KERNEL_VERSION }}"
 
-          # SukiSU Ultra config
+          # SukiSU Ultra配置
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
           echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
           if [ "${{ github.event.inputs.VFS }}" = "false" ]; then
           echo "CONFIG_KPROBES=y" >> "$CONFIG_FILE"
           fi
-          # VFS config
+          # VFS配置
           if [ "${{ github.event.inputs.VFS }}" = "true" ]; then
             echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_MANUAL_HOOK=y" >> "$CONFIG_FILE"
@@ -318,7 +319,7 @@ jobs:
             echo "CONFIG_KSU_SUSFS_SUS_SU=y" >> "$CONFIG_FILE"
           fi
 
-          # SUSFS config
+          # SUSFS配置
           if [ "${{ github.event.inputs.VFS }}" = "true" ]; then
           echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
           echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> "$CONFIG_FILE"
@@ -340,7 +341,7 @@ jobs:
           # Remove check_defconfig
           sed -i 's/check_defconfig//' ./common/build.config.gki
 
-          # LZ4KD配置
+          # LZ4KD配置*
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
           CONFIG_FILE=./common/arch/arm64/configs/gki_defconfig
 
@@ -433,21 +434,21 @@ jobs:
             image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
           fi
 
-          # 拷贝 Image
+          # 复制 Image 到同一个路径方便直接调用
           if [ -n "$image_path" ] && [ -f "$image_path" ]; then
             mkdir -p "$dir1"
             if [ "$(realpath "$image_path")" != "$(realpath "$dir1"Image)" ]; then
               cp "$image_path" "$dir1"
             else
-              echo "源文件与目标相同，跳过复制"
+              echo "源文件路径与目标路径相同，跳过复制"
             fi
             cp "$dir1"Image ./AnyKernel3/Image
           else
-            echo "未找到 Image 文件，构建可能失败"
+            echo "未找到 Image 文件，无法复制，构建可能失败"
             exit 1
           fi
 
-          # 可选复制其它新文件（如果存在）
+          # 复制其它可能需要的文件（如果存在），部分 img 并不会直接安装，仅复制到 zip 供参考使用
           if [ "${{ github.event.inputs.CPU }}" = "sm8750" ]; then
           for file in dtbo.img system_dlkm.erofs.img vendor_dlkm.img vendor_boot.img; do
             if [ -f "$dir1$file" ]; then
@@ -492,13 +493,39 @@ jobs:
           curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o ksu_module_susfs_1.5.2+_CI.zip "$ARTIFACT_URL"
           cp ksu_module_susfs_1.5.2+_CI.zip ./AnyKernel3/
 
-      # 下载 SUSFS 模块（Release）
+      # 下载 SUSFS 模块（Release）*
       - name: Download Latest SUSFS Module from Release
         if: ${{ github.event.inputs.SUSFS_CI == 'false' }}
         run: |
           wget -O ksu_module_susfs_1.5.2+_Release.zip https://github.com/sidex15/ksu_module_susfs/releases/latest/download/ksu_module_susfs_1.5.2+.zip
           cp ksu_module_susfs_1.5.2+_Release.zip ./AnyKernel3/
 
+      # 解压 SukiSU Ultra（CI）（不自动安装）
+      - name: Download Latest SukiSU-Ultra APK from CI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          run_id=$(gh api \
+            "repos/SukiSU-Ultra/SukiSU-Ultra/actions/workflows/build-manager.yml/runs?branch=main&status=success&per_page=1" \
+            --jq '.workflow_runs[0].id')
+          if [[ -z "$run_id" ]]; then
+            echo "No successful workflow run found."
+            exit 1
+          fi
+
+          artifact_url=$(gh api \
+            "repos/SukiSU-Ultra/SukiSU-Ultra/actions/runs/$run_id/artifacts" \
+            --jq '.artifacts[] | select(.name == "manager") | .archive_download_url')
+
+          if [[ -z "$artifact_url" ]]; then
+            echo "No manager artifact found."
+            exit 1
+          fi
+
+          curl -L -H "Authorization: token $GITHUB_TOKEN" -o manager.zip "$artifact_url"
+          unzip -j manager.zip "*.apk" -d ./AnyKernel3/
+
+      # 从一加源码中获取适用的 Android 版本信息，注意是系统 Android 版本而非你填写的内核 Android 版本，非一加官方源码可能需要修改或删除这一步
       - name: Set zip suffix
         id: suffix
         run: |
@@ -512,7 +539,7 @@ jobs:
           xml=".repo/manifests/${feil}.xml"
 
           if [ ! -f "$xml" ]; then
-            echo "Manifest $xml not found, attempting to download from branch oneplus/$cpu..."
+            echo "Manifest $xml not found,This is expected behavior,not an error.Attempting to download from branch oneplus/$cpu..."
             mkdir -p .repo/manifests
             git clone --depth=1 --branch oneplus/$cpu https://github.com/OnePlusOSS/kernel_manifest.git repo_tmp || {
               echo "Failed to clone branch oneplus/$cpu"

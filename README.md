@@ -5,6 +5,17 @@
 # Action-Build
 **```Build OnePlus SukiSU Ultra KPM Kernel```**
  
+<details>
+<summary><strong>点击查看如何fork项目</strong></summary>
+<img src="https://github.com/Numbersf/Action-Build/blob/main/pic%2Fmake.gif" width="500"/>
+</details>
+ 
+<details>
+<summary><strong>点击查看如何同步fork后的项目到最新</strong></summary>
+<img src="https://github.com/Numbersf/Action-Build/blob/main/pic%2Fsyncfork.png" width="150"/>
+<summary>请及时同步!某些更新可能会导致旧版本失效!</summary>
+</details>
+ 
 # 公告
  
 ------
@@ -71,7 +82,7 @@
 >
 >>>>0.已知的特殊机型:部分非A15机型(eg:一加11-A14;一加11-A13)
 > 
->>>`1h12min~1h17min,max:?`
+>>>`1h8min~1h17min,max:1h17min`
 >>>>0.其他所有机型
 > 
 >>>`22min~31min,max:35min`
@@ -80,9 +91,9 @@
 > <details>
 > <summary><strong>点击查看使用官方build.sh的用时</strong></summary>
 >
->>>>0.已知的特殊机型:部分非A15机型(eg:一加11-A14;一加11-A13不支持)
+>>>>0.已知的特殊机型:部分非A15机型(eg:一加11-A14;一加11-A13)
 > 
->>>`1h22min~1h28min,max:?`
+>>>`1h14min~1h28min,max:1h28min`
 >>>>1.sm8450、sm8475、sm8550
 > 
 >>>`30~35min,max:45min`
@@ -111,6 +122,8 @@
 ------
  
 # 更新日志
+--修复内核版本介于`5.15.0-5.15.123`之间官方脚本跑不出,极速编译结果有问题[@zzh20188](https://github.com/zzh20188)  
+--支持`BBR`,默认不开启  
 --允许自定义内核后缀  <- **`beta`**  
 ```
 1.当自定义内核后缀为空时,使用随机字符串,不再是默认的“x.xx.xxx-androidxx-8-o-g3b1e97b8b29f”
